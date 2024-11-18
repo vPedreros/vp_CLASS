@@ -271,7 +271,7 @@ int background_functions(
   /* scale factor */
   double a;
   /* scalar field quantities */
-  double phi, phi_prime;
+  double phi, phi_prime, phi_primeprime;
 
   /** - initialize local variables */
   a = pvecback_B[pba->index_bi_a];
@@ -332,8 +332,10 @@ int background_functions(
   if (pba->has_scf == _TRUE_) {
     phi = pvecback_B[pba->index_bi_phi_scf];
     phi_prime = pvecback_B[pba->index_bi_phi_prime_scf];
+    phi_primeprime = pvecback_B[pba->index_bi_phi_primeprime_scf];
     pvecback[pba->index_bg_phi_scf] = phi; // value of the scalar field phi
     pvecback[pba->index_bg_phi_prime_scf] = phi_prime; // value of the scalar field phi derivative wrt conformal time
+    pvecback[pba->index_bg_phi_primeprime_scf] = phi_primeprime; // value of the scalar field phi 2nd derivative wrt conformal time
     pvecback[pba->index_bg_V_scf] = V_scf(pba,phi); //V_scf(pba,phi); //write here potential as function of phi
     pvecback[pba->index_bg_dV_scf] = dV_scf(pba,phi); // dV_scf(pba,phi); //potential' as function of phi
     pvecback[pba->index_bg_ddV_scf] = ddV_scf(pba,phi); // ddV_scf(pba,phi); //potential'' as function of phi
@@ -385,11 +387,21 @@ int background_functions(
     }
   }
 
+  /*<vPedre<*/
   /* Lambda */
   if (pba->has_lambda == _TRUE_) {
-    pvecback[pba->index_bg_rho_lambda] = pba->Omega0_lambda * pow(pba->H0,2);
+
+      /*>vPedre>*/
+    /*Background is modified, due to MG. Lets build the eff de density and  eos parameter: effrho_de and effw_de*/
+    double HK, HK_X, HK_phi, HG3, HG3_X, HG3_phi, HG4, HG4_phi, HG4_phiphi,   effrho_de, effw_de, kappa;
+
+    effrho_de = (kappa/3)*(pow(phi_prime/a,2)*HK_X - HK + 3*pow(phi_prime/a,  3)*HG3_X*pvecback[pba->index_bg_H] - HG3_phi*pow(phi_prime/a,2) + 3*pow (pvecback[pba->index_bg_H],2)* (1/kappa - 2*HG4)-6*pvecback  [pba->index_bg_H]*phi_prime/a*HG4_phi);
+
+    effw_de = (HK - pow(phi_prime/a,2)*(HG3_phi+(phi_primeprime/a/  a-phi_prime/a*pvecback[pba->index_bg_H])*HG3_X) + 2*pow(phi_prime/a,2)  *HG4_phiphi + 2*(phi_primeprime/a/a +phi_prime/a*[pba->index_bg_H]) *HG4_phi-(3*pow(pvecback[pba->index_bg_H],2) +2*pvecback [pba->index_bg_H_prime])*(1/3-2*HG4)) / effrho_de;
+
+    pvecback[pba->index_bg_rho_lambda] = effrho_de*pba->Omega0_lambda * pow(pba->H0,2);
     rho_tot += pvecback[pba->index_bg_rho_lambda];
-    p_tot -= pvecback[pba->index_bg_rho_lambda];
+    p_tot = effw_de*pvecback[pba->index_bg_rho_lambda];
   }
 
   /* fluid with w(a) and constant cs2 */
@@ -911,6 +923,7 @@ int background_indices(
   /* - indices for scalar field */
   class_define_index(pba->index_bg_phi_scf,pba->has_scf,index_bg,1);
   class_define_index(pba->index_bg_phi_prime_scf,pba->has_scf,index_bg,1);
+  class_define_index(pba->index_bg_phi_primeprime_scf,pba->has_scf,index_bg,1);
   class_define_index(pba->index_bg_V_scf,pba->has_scf,index_bg,1);
   class_define_index(pba->index_bg_dV_scf,pba->has_scf,index_bg,1);
   class_define_index(pba->index_bg_ddV_scf,pba->has_scf,index_bg,1);
@@ -1012,7 +1025,7 @@ int background_indices(
   /* -> scalar field and its derivative wrt conformal time (Zuma) */
   class_define_index(pba->index_bi_phi_scf,pba->has_scf,index_bi,1);
   class_define_index(pba->index_bi_phi_prime_scf,pba->has_scf,index_bi,1);
-
+  class_define_index(pba->index_bi_phi_primeprime_scf,pba->has_scf,index_bi,1);
   /* End of {B} variables, now continue with {C} variables */
   pba->bi_B_size = index_bi;
 
@@ -2356,6 +2369,7 @@ int background_output_data(
     class_store_double(dataptr,pvecback[pba->index_bg_p_scf],pba->has_scf,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_phi_scf],pba->has_scf,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_phi_prime_scf],pba->has_scf,storeidx);
+    class_store_double(dataptr,pvecback[pba->index_bg_phi_primeprime_scf],pba->has_scf,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_V_scf],pba->has_scf,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_dV_scf],pba->has_scf,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_ddV_scf],pba->has_scf,storeidx);
