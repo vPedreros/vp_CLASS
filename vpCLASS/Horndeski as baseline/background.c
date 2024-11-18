@@ -2111,22 +2111,22 @@ int background_solve(
     pba->background_table[index_loga*pba->bg_size+pba->index_bg_D2] = pData[i*pba->bi_size + pba->index_bi_D2]/
       pow(pData[(pba->bt_size - 1)*pba->bi_size + pba->index_bi_D], 2);
     pba->background_table[index_loga*pba->bg_size+pba->index_bg_f2] = pData[i*pba->bi_size + pba->index_bi_D2_prime]/
-      (pData[i*pba->bi_size + pba->index_bi_D2]*pvecback[pba->index_bg_a]*pvecback[pba->index_bg_H]);
+      (pData[i*pba->bi_size + pba->index_bi_D2]*background_table[index_loga*pba->bg_size+pba->index_bg_a]*background_table[index_loga*pba->bg_size+pba->index_bg_H]);
     /* Normalise D3a by the cubed factor used for D and construct f3a = D3a_prime/(aHD) */
     pba->background_table[index_loga*pba->bg_size+pba->index_bg_D3a] = pData[i*pba->bi_size + pba->index_bi_D3a]/
       pow(pData[(pba->bt_size - 1)*pba->bi_size + pba->index_bi_D], 3);
     pba->background_table[index_loga*pba->bg_size+pba->index_bg_f3a] = pData[i*pba->bi_size + pba->index_bi_D3a_prime]/
-      (pData[i*pba->bi_size + pba->index_bi_D3a]*pvecback[pba->index_bg_a]*pvecback[pba->index_bg_H]);
+      (pData[i*pba->bi_size + pba->index_bi_D3a]*background_table[index_loga*pba->bg_size+pba->index_bg_a]*background_table[index_loga*pba->bg_size+pba->index_bg_H]);
     /* Normalise D3b by the cubed factor used for D and construct f3b = D3b_prime/(aHD) */
     pba->background_table[index_loga*pba->bg_size+pba->index_bg_D3b] = pData[i*pba->bi_size + pba->index_bi_D3b]/
       pow(pData[(pba->bt_size - 1)*pba->bi_size + pba->index_bi_D], 3);
     pba->background_table[index_loga*pba->bg_size+pba->index_bg_f3b] = pData[i*pba->bi_size + pba->index_bi_D3b_prime]/
-      (pData[i*pba->bi_size + pba->index_bi_D3b]*pvecback[pba->index_bg_a]*pvecback[pba->index_bg_H]);
+      (pData[i*pba->bi_size + pba->index_bi_D3b]*background_table[index_loga*pba->bg_size+pba->index_bg_a]*background_table[index_loga*pba->bg_size+pba->index_bg_H]);
     /* Normalise D3c by the cubed factor used for D and construct f3c = D3c_prime/(aHD) */
     pba->background_table[index_loga*pba->bg_size+pba->index_bg_D3c] = pData[i*pba->bi_size + pba->index_bi_D3c]/
       pow(pData[(pba->bt_size - 1)*pba->bi_size + pba->index_bi_D], 3);
     pba->background_table[index_loga*pba->bg_size+pba->index_bg_f3c] = pData[i*pba->bi_size + pba->index_bi_D3c_prime]/
-      (pData[i*pba->bi_size + pba->index_bi_D3c]*pvecback[pba->index_bg_a]*pvecback[pba->index_bg_H]);
+      (pData[i*pba->bi_size + pba->index_bi_D3c]*background_table[index_loga*pba->bg_size+pba->index_bg_a]*background_table[index_loga*pba->bg_size+pba->index_bg_H]);
     /**************************/
     /* ^For use with CONCEPT^ */
     /**************************/
