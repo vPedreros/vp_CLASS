@@ -2699,6 +2699,16 @@ int input_read_parameters_species(struct file_content * pfc,
     /* Read */
     class_read_list_of_doubles_or_default("ksi_ncdm",pba->ksi_ncdm,pba->ksi_ncdm_default,N_ncdm);
 
+    /************************/
+    /* For use with CONCEPT */
+    /************************/
+    /* Read growth factor contribution of each ncdm species: */
+    class_read_list_of_doubles_or_default(
+      "growthfac_contrib_ncdm",pba->growthfac_contrib_ncdm,0.0,N_ncdm);
+    /**************************/
+    /* ^For use with CONCEPT^ */
+    /**************************/
+
     /** 5.g) Degeneracy of each ncdm species */
     /* Read */
     class_read_list_of_doubles_or_default("deg_ncdm",pba->deg_ncdm,pba->deg_ncdm_default,N_ncdm);
@@ -5809,6 +5819,20 @@ int input_default_params(struct background *pba,
   pba->h = 0.67810;
   pba->H0 = pba->h*1.e5/_c_;
 
+  /************************/
+  /* For use with CONCEPT */
+  /************************/
+  char * CONCEPT_CLASS_CALL = getenv("CONCEPT_CLASS_CALL");
+  if (CONCEPT_CLASS_CALL == NULL) {
+    pba->node = 0;
+    pba->num_threads = -1;
+    pba->message = (char*)malloc(1*sizeof(char));
+    pba->message[0] = '\0';
+  }
+  /**************************/
+  /* ^For use with CONCEPT^ */
+  /**************************/
+
   /** 6) Primordial Helium fraction */
   pth->YHe = _YHE_BBN_;
 
@@ -5888,6 +5912,15 @@ int input_default_params(struct background *pba,
   /** 5.e) ncdm temperature */
   pba->T_ncdm_default = 0.71611; /* this value gives m/omega = 93.14 eV b*/
   pba->T_ncdm = NULL;
+
+  /************************/
+  /* For use with CONCEPT */
+  /************************/
+  pba->growthfac_contrib_ncdm = NULL;
+  /**************************/
+  /* ^For use with CONCEPT^ */
+  /**************************/
+
   /** 5.f) ncdm chemical potential */
   pba->ksi_ncdm_default = 0.;
   pba->ksi_ncdm = NULL;
