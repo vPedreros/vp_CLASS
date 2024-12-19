@@ -711,30 +711,6 @@ int perturbations_init(
   int index_tp;
   /* background quantities */
   double w_fld_ini, w_fld_0,dw_over_da_fld,integral_fld;
-  
-  /***********************/
-  /* For use with OPENMP */
-  /***********************/
-  /* pointer to one struct perturb_workspace per thread (one if no openmp) */
-  struct perturb_workspace ** pppw;
-  /* number of threads (always one if no openmp) */
-  int number_of_threads=1;
-  /* index of the thread (always 0 if no openmp) */
-  int thread=0;
-  /* This code can be optionally compiled with the openmp option for parallel computation.
-     Inside parallel regions, the use of the command "return" is forbidden.
-     For error management, instead of "return _FAILURE_", we will set the variable below
-     to "abort = _TRUE_". This will lead to a "return _FAILURE_" just after leaving the
-     parallel region. */
-  int abort;
-
-  #ifdef _OPENMP
-    /* instrumentation times */
-    double tstart, tstop, tspent;
-  #endif
-  /***********************/
-  /*^For use with OPENMP^*/
-  /***********************/
 
   /** - perform preliminary checks */
 
@@ -3437,6 +3413,22 @@ int perturbations_prepare_k_output(struct background * pba,
       class_store_columntitle(ppt->scalar_titles, "delta_rho_fld", pba->has_fld);
       class_store_columntitle(ppt->scalar_titles, "rho_plus_p_theta_fld", pba->has_fld);
       class_store_columntitle(ppt->scalar_titles, "delta_p_fld", pba->has_fld);
+      /************************/
+      /* For use with CONCEPT */
+      /************************/
+      //vp: I am awawre of this being redundant
+      /* Include fld in perturbation output */
+      class_store_columntitle(ppt->scalar_titles, "delta_fld", pba->has_fld);
+      class_store_columntitle(ppt->scalar_titles, "theta_fld", pba->has_fld);
+      class_store_columntitle(ppt->scalar_titles, "shear_fld", pba->has_fld);
+      /**
+       * We choose to store cs2_fld = delta_p_fld/delta_rho_fld rather than
+       * simply delta_p_fld itself, as is done for massive neutrinos.
+       */
+      class_store_columntitle(ppt->scalar_titles, "cs2_fld", pba->has_fld);
+      /**************************/
+      /* ^For use with CONCEPT^ */
+      /**************************/
       if (pba->has_smg == _TRUE_) {
         class_call(
           perturbations_prepare_k_output_smg(ppt),
@@ -3446,6 +3438,14 @@ int perturbations_prepare_k_output(struct background * pba,
       }
       /* Metric perturbations */
       class_store_columntitle(ppt->scalar_titles,"h_prime",ppt->gauge == synchronous);
+      /************************/
+      /* For use with CONCEPT */
+      /************************/
+      /* Include H_T_prime (in N-body gauge) in perturbation output */
+      class_store_columntitle(ppt->scalar_titles, "H_T_prime", _TRUE_);
+      /**************************/
+      /* ^For use with CONCEPT^ */
+      /**************************/
       class_store_columntitle(ppt->scalar_titles,"h_prime_prime",ppt->gauge == synchronous);
       class_store_columntitle(ppt->scalar_titles,"eta",ppt->gauge == synchronous);
       class_store_columntitle(ppt->scalar_titles,"eta_prime",ppt->gauge == synchronous);
@@ -7352,6 +7352,60 @@ int perturbations_total_stress_energy(
     /* add your extra species here */
 
     /* fluid contribution */
+
+    /************************/
+    /* For use with CONCEPT */
+    /************************/
+    /**
+     * Count up total pressure and conformal time derivative of pressure,
+     * excluding the fld species. These are used for the PPF formalism of fld.
+     */
+    double p_tot = 0.;
+    double p_tot_prime = 0.;
+    if (pba->has_fld == _TRUE_ && pba->use_ppf == _TRUE_) {
+      /* Photons */
+      p_tot += 1./3.*ppw->pvecback[pba->index_bg_rho_g];
+      p_tot_prime += -3.*a_prime_over_a*(1. + 1./3.)*1./3.
+        *ppw->pvecback[pba->index_bg_rho_g];
+      /* Baryons have no pressure */
+      /* Ultra relativistic species */
+      if (pba->has_ur == _TRUE_) {
+        p_tot += 1./3.*ppw->pvecback[pba->index_bg_rho_ur];
+        p_tot_prime += -3.*a_prime_over_a*(1. + 1./3.)*1./3.
+          *ppw->pvecback[pba->index_bg_rho_ur];
+      }
+      /* Cold dark matter has no pressure */
+      /* Non-cold dark matter */
+      if (pba->has_ncdm == _TRUE_) {
+        for(n_ncdm = 0; n_ncdm < pba->N_ncdm; n_ncdm++) {
+          p_tot += ppw->pvecback[pba->index_bg_p_ncdm1 + n_ncdm];
+          p_tot_prime += -a_prime_over_a*(5.*ppw->pvecback[pba->index_bg_p_ncdm1 + n_ncdm]
+            - ppw->pvecback[pba->index_bg_pseudo_p_ncdm1 + n_ncdm]);
+        }
+      }
+      /* Decaying cold dark matter has no pressure */
+      /* Decay radiation */
+      if (pba->has_dr == _TRUE_) {
+        p_tot += 1./3.*ppw->pvecback[pba->index_bg_rho_dr];
+        p_tot_prime += -3.*a_prime_over_a*(1. + 1./3.)*1./3.
+          *ppw->pvecback[pba->index_bg_rho_dr]
+          + 1./3.*a*pba->Gamma_dcdm*ppw->pvecback[pba->index_bg_rho_dcdm];
+      }
+      /* Importantly, we skip the dark energy fluid */
+      /* Scalar field */
+      if (pba->has_scf == _TRUE_) {
+        p_tot += ppw->pvecback[pba->index_bg_p_scf];
+        p_tot_prime += -a_prime_over_a/(a*a)*ppw->pvecback[pba->index_bg_phi_prime_scf]
+          *ppw->pvecback[pba->index_bg_phi_prime_scf]
+          - 2./3.*ppw->pvecback[pba->index_bg_dV_scf]
+            *ppw->pvecback[pba->index_bg_phi_prime_scf];
+      }
+      /* Lambda has constant pressure */
+    }
+    /**************************/
+    /* ^For use with CONCEPT^ */
+    /**************************/
+
     if (pba->has_fld == _TRUE_) {
 
       class_call(background_w_fld(pba,a,&w_fld,&dw_over_da_fld,&integral_fld), pba->error_message, ppt->error_message);
@@ -7370,10 +7424,24 @@ int perturbations_total_stress_energy(
         /** The equation is too stiff for Runge-Kutta when c_gamma_k_H_square is large.
             Use the asymptotic solution Gamma=Gamma'=0 in that case.
         */
+       /*vp: as concept*/
+        double Gamma_weight, Gamma_weight_steepness, c_gamma_k_H_square_max_0
+        c_gamma_k_H_square_max_0 = 1e+3;
+        /*vp: as concept*/
         if (c_gamma_k_H_square > ppr->c_gamma_k_H_square_max)
           Gamma_fld = 0.;
         else
           Gamma_fld = y[ppw->pv->index_pt_Gamma_fld];
+          /*vp: as concept*/
+          if (c_gamma_k_H_square > c_gamma_k_H_square_max_0){
+            Gamma_weight_steepness = 5.; /* 5 results in double precision perfect transition */
+            Gamma_weight = 0.5*(erf(Gamma_weight_steepness*(
+              0.5*(log(c_gamma_k_H_square_max_0) + log(c_gamma_k_H_square_max_1))
+              - log(c_gamma_k_H_square)
+            )) + 1.);
+            Gamma_fld *= Gamma_weight;
+          }
+          /*vp: as concept*/
 
         if (ppt->gauge == synchronous){
           alpha = (y[ppw->pv->index_pt_eta]+1.5*a2/k2/s2sq*(ppw->delta_rho+3*a_prime_over_a/k2*ppw->rho_plus_p_theta)-Gamma_fld)/a_prime_over_a;
@@ -7394,6 +7462,11 @@ int perturbations_total_stress_energy(
         }
         else{
           ppw->Gamma_prime_fld = a_prime_over_a*(ppw->S_fld/(1.+c_gamma_k_H_square) - (1.+c_gamma_k_H_square)*Gamma_fld);
+          /*vp: as concept*/
+          if (c_gamma_k_H_square > c_gamma_k_H_square_max_0){
+            ppw->Gamma_prime_fld *= Gamma_weight;
+          }
+          /*vp: as concept*/
         }
         Gamma_prime_plus_a_prime_over_a_Gamma = ppw->Gamma_prime_fld+a_prime_over_a*Gamma_fld;
         // delta and theta in both gauges gauge:
@@ -8339,6 +8412,22 @@ int perturbations_print_variables(double tau,
   int idx,index_q, storeidx;
   double *dataptr;
 
+  /************************/
+  /* For use with CONCEPT */
+  /************************/
+  /**
+   * Compute perturbation derivatives. This also ensures that the
+   * ppw (and other) structs are up-to-date. This is important
+   * when using the Runge-Kutta evolver, as this is otherwise
+   * not taken care off correctly.
+   */
+  class_call(
+    perturb_derivs(tau, y, dy, parameters_and_workspace, error_message),
+    error_message,
+    error_message);
+  /**************************/
+  /* ^For use with CONCEPT^ */
+  /**************************/
 
   /** - rename structure fields (just to avoid heavy notations) */
 
@@ -8391,6 +8480,18 @@ int perturbations_print_variables(double tau,
              error_message);
 
   a = pvecback[pba->index_bg_a];
+
+  /************************/
+  /* For use with CONCEPT */
+  /************************/
+  /* Only return output at late times */
+  double a_min = 3e-4;
+  if (a < a_min)
+    return _SUCCESS_;
+  /**************************/
+  /* ^For use with CONCEPT^ */
+  /**************************/
+
   a2 = a*a;
   H = pvecback[pba->index_bg_H];
 
@@ -8614,7 +8715,15 @@ int perturbations_print_variables(double tau,
     }
 
     /* converting synchronous variables to newtonian ones */
-    if (ppt->gauge == synchronous) {
+
+    /************************/
+    /* For use with CONCEPT */
+    /************************/
+    /* Do not convert to Newtonian gauge */
+    if (0 == 1) {  /* (ppt->gauge == synchronous) { */
+    /**************************/
+    /* ^For use with CONCEPT^ */
+    /**************************/
 
       /* metric perturbations (not only _smg) */
       h_prime = ppw->pvecmetric[ppw->index_mt_h_prime];
@@ -8744,6 +8853,49 @@ int perturbations_print_variables(double tau,
     class_store_double(dataptr, delta_scf, pba->has_scf, storeidx);
     class_store_double(dataptr, theta_scf, pba->has_scf, storeidx);
     /** Fluid */
+
+    /************************/
+    /* For use with CONCEPT */
+    /************************/
+    /* Include fld in perturbation output */
+    double w_fld, dw_over_da_fld, integral_fld, theta_fld;
+    if (pba->has_fld) {
+      class_call(background_w_fld(pba, a, &w_fld, &dw_over_da_fld, &integral_fld),
+        pba->error_message, ppt->error_message);
+      class_store_double(dataptr, ppw->delta_rho_fld/pvecback[pba->index_bg_rho_fld],
+        pba->has_fld, storeidx);
+      /* For w_fld = -1 (Lambda), we have theta = 0 */
+      if (w_fld == -1.) {
+        theta_fld = 0.;
+      }
+      else {
+        theta_fld = ppw->rho_plus_p_theta_fld/
+          ((1. + w_fld)*pvecback[pba->index_bg_rho_fld]);
+      }
+      class_store_double(dataptr, theta_fld, pba->has_fld, storeidx);
+      /**
+       * We choose to store cs2_fld = delta_p_fld/delta_rho_fld rather than
+       * simply delta_p_fld itself, as is done for massive neutrinos.
+       *
+       */
+      class_store_double(dataptr,
+        ppw->delta_p_fld/ppw->delta_rho_fld, pba->has_fld, storeidx);
+    }
+    /**************************/
+    /* ^For use with CONCEPT^ */
+    /**************************/
+
+    /************************/
+    /* For use with CONCEPT */
+    /************************/
+    /* Include theta_tot in perturbation output */
+    double rho_plus_p_tot = -2./3.*pvecback[pba->index_bg_H_prime]/a + 2./3.*pba->K/(a*a);
+    double theta_tot = ppw->rho_plus_p_theta/rho_plus_p_tot;
+    class_store_double(dataptr, theta_tot, _TRUE_, storeidx);
+    /**************************/
+    /* ^For use with CONCEPT^ */
+    /**************************/
+
     class_store_double(dataptr, ppw->delta_rho_fld, pba->has_fld, storeidx);
     class_store_double(dataptr, ppw->rho_plus_p_theta_fld, pba->has_fld, storeidx);
     class_store_double(dataptr, ppw->delta_p_fld, pba->has_fld, storeidx);
@@ -8762,6 +8914,53 @@ int perturbations_print_variables(double tau,
     class_store_double(dataptr, alpha_mt, ppt->gauge == synchronous, storeidx);
     class_store_double(dataptr, alpha_mt_prime, ppt->gauge == synchronous, storeidx);
     class_store_double(dataptr, ppw->pvecmetric[ppw->index_mt_einstein00], ppt->gauge == synchronous, storeidx);
+
+    /************************/
+    /* For use with CONCEPT */
+    /************************/
+    /**
+     * Include H_T_prime (in N-body gauge) in perturbation output.
+     * Here we make use of rho_plus_p_tot defined earlier.
+     */
+    double p_tot_prime = 0.0;
+    /* Photons */
+     p_tot_prime += -3.*a*H*(1. + 1./3.)*1./3.*pvecback[pba->index_bg_rho_g];
+    /* Baryons have no pressure */
+    /* Ultra relativistic species */
+    if (pba->has_ur == _TRUE_)
+      p_tot_prime += -3.*a*H*(1. + 1./3.)*1./3.*pvecback[pba->index_bg_rho_ur];
+    /* Cold dark matter has no pressure */
+    /* Non-cold dark matter */
+    if (pba->has_ncdm == _TRUE_) {
+      for(n_ncdm=0; n_ncdm < pba->N_ncdm; n_ncdm++)
+        p_tot_prime += -a*H*(5.*pvecback[pba->index_bg_p_ncdm1+n_ncdm]
+        - pvecback[pba->index_bg_pseudo_p_ncdm1+n_ncdm]);
+    }
+    /* Decaying cold dark matter has no pressure */
+    /* Decay radiation */
+    if (pba->has_dr == _TRUE_)
+      p_tot_prime += -3.*a*H*(1. + 1./3.)*1./3.*pvecback[pba->index_bg_rho_dr]
+        + 1./3.*a*pba->Gamma_dcdm*pvecback[pba->index_bg_rho_dcdm];
+    /* Dark energy fluid */
+    if (pba->has_fld == _TRUE_) {
+      p_tot_prime += a*H*pvecback[pba->index_bg_rho_fld]
+        *(a*dw_over_da_fld - 3.*w_fld*(1. + w_fld));
+    }
+    /* Scalar field */
+    if (pba->has_scf == _TRUE_) {
+      p_tot_prime += -H/a*pvecback[pba->index_bg_phi_prime_scf]
+        *pvecback[pba->index_bg_phi_prime_scf]
+        - 2./3.*pvecback[pba->index_bg_dV_scf]*pvecback[pba->index_bg_phi_prime_scf];
+    }
+    /* Lambda has constant pressure */
+    double H_T_prime = 3.*a*H/rho_plus_p_tot*(
+      - ppw->delta_p
+      + p_tot_prime*theta_tot/(k*k)
+      + ppw->rho_plus_p_shear);
+    class_store_double(dataptr, H_T_prime, _TRUE_, storeidx);
+    /**************************/
+    /* ^For use with CONCEPT^ */
+    /**************************/
 
   }
   /** - for tensor modes: */
