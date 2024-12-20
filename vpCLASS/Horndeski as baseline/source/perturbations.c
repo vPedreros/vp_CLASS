@@ -7424,8 +7424,8 @@ int perturbations_total_stress_energy(
         /** The equation is too stiff for Runge-Kutta when c_gamma_k_H_square is large.
             Use the asymptotic solution Gamma=Gamma'=0 in that case.
         */
-       /*vp: as concept*/
-        double Gamma_weight, Gamma_weight_steepness, c_gamma_k_H_square_max_0
+        /*vp: as concept*/
+        double Gamma_weight, Gamma_weight_steepness, c_gamma_k_H_square_max_0;
         c_gamma_k_H_square_max_0 = 1e+3;
         /*vp: as concept*/
         if (c_gamma_k_H_square > ppr->c_gamma_k_H_square_max)
@@ -7436,7 +7436,7 @@ int perturbations_total_stress_energy(
           if (c_gamma_k_H_square > c_gamma_k_H_square_max_0){
             Gamma_weight_steepness = 5.; /* 5 results in double precision perfect transition */
             Gamma_weight = 0.5*(erf(Gamma_weight_steepness*(
-              0.5*(log(c_gamma_k_H_square_max_0) + log(c_gamma_k_H_square_max_1))
+              0.5*(log(c_gamma_k_H_square_max_0) + log(ppr->c_gamma_k_H_square_max))
               - log(c_gamma_k_H_square)
             )) + 1.);
             Gamma_fld *= Gamma_weight;
@@ -8422,7 +8422,7 @@ int perturbations_print_variables(double tau,
    * not taken care off correctly.
    */
   class_call(
-    perturb_derivs(tau, y, dy, parameters_and_workspace, error_message),
+    perturbations_derivs(tau, y, dy, parameters_and_workspace, error_message),
     error_message,
     error_message);
   /**************************/

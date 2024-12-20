@@ -2110,14 +2110,15 @@ int background_solve(
     /*Normalizing by squared and cubed factors used for D*/
     pba->background_table[index_loga*pba->bg_size+pba->index_bg_D2]*= 1./pow(D_today,2);
     pba->background_table[index_loga*pba->bg_size+pba->index_bg_D3a]*= 1./pow(D_today,3);
-    pba->background_table[index_loga*pba->bg_size+pba->index_bg_3b]*= 1./pow(D_today,3);
+    pba->background_table[index_loga*pba->bg_size+pba->index_bg_D3b]*= 1./pow(D_today,3);
     pba->background_table[index_loga*pba->bg_size+pba->index_bg_D3c]*= 1./pow(D_today,3);
 
     /* Second and third order velocity growth factors*/
-    pvecback[pba->index_bg_f2] = pvecback_B[pba->index_bi_D2_prime]/( pvecback_B[pba->indexbi_D2]*a*pvecback[pba->index_bg_H])
-    pvecback[pba->index_bg_f3a] = pvecback_B[pba->index_bi_D3a_prime]/( pvecback_B[pba->indexbi_D3a]*a*pvecback[pba->index_bg_H])
-    pvecback[pba->index_bg_f3b] = pvecback_B[pba->index_bi_D3b_prime]/( pvecback_B[pba->indexbi_D3b]*a*pvecback[pba->index_bg_H])
-    pvecback[pba->index_bg_f3c] = pvecback_B[pba->index_bi_D3c_prime]/( pvecback_B[pba->indexbi_D3c]*a*pvecback[pba->index_bg_H])
+    
+    pvecback[pba->index_bg_f2] = pvecback[pba->index_bi_D2_prime]/( pvecback[pba->index_bi_D2]*exp(pba->loga_table[index_loga])*pvecback[pba->index_bg_H]);
+    pvecback[pba->index_bg_f3a] = pvecback[pba->index_bi_D3a_prime]/( pvecback[pba->index_bi_D3a]*exp(pba->loga_table[index_loga])*pvecback[pba->index_bg_H]);
+    pvecback[pba->index_bg_f3b] = pvecback[pba->index_bi_D3b_prime]/( pvecback[pba->index_bi_D3b]*exp(pba->loga_table[index_loga])*pvecback[pba->index_bg_H]);
+    pvecback[pba->index_bg_f3c] = pvecback[pba->index_bi_D3c_prime]/( pvecback[pba->index_bi_D3c]*exp(pba->loga_table[index_loga])*pvecback[pba->index_bg_H]);
     /**************************/
     /* ^For use with CONCEPT^ */
     /**************************/
@@ -2496,7 +2497,7 @@ int background_initial_conditions(
     Omega0_M += pba->Omega0_cdm;
   if (pba->has_dcdm == _TRUE_)
     Omega0_M += pba->Omega_ini_dcdm;  /* take dcdm into account */
-  double Omega0_R_eff = pow(a/pba->a_today, 4)*pow(pvecback[pba->index_bg_H]/pba->H0, 2);  /* take all relativistic species into account */
+  double Omega0_R_eff = pow(a, 4)*pow(pvecback[pba->index_bg_H]/pba->H0, 2);  /* take all relativistic species into account */
   double eps = 3./2.*Omega0_M/Omega0_R_eff*a;
   double aH = a*pvecback[pba->index_bg_H];
   double C = 1.0;  /* arbitrary */
@@ -2613,7 +2614,10 @@ int background_output_titles(
                              ) {
 
   /** - Length of the column title should be less than _OUTPUTPRECISION_+6
-      to be indented correctly, but it can be as long as . */growing tab
+      to be indented correctly, but it can be as long as . */
+  int n;
+  char tmp[40];
+
   class_store_columntitle(titles,"z",_TRUE_);
   class_store_columntitle(titles,"proper time [Gyr]",_TRUE_);
   class_store_columntitle(titles,"conf. time [Mpc]",_TRUE_);
